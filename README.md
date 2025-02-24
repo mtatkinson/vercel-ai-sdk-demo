@@ -43,6 +43,18 @@ This is a comprehensive demo application showcasing various capabilities of the 
   - `/components`: Reusable UI components
   - Various feature directories for different AI capabilities
 
+## Vercel AI SDK
+
+This project is built using the [Vercel AI SDK](https://sdk.vercel.ai/docs/introduction), a powerful library for building AI-powered user interfaces. The SDK provides:
+
+- Edge Runtime-ready streaming abstractions
+- First-class support for LLMs (Large Language Models)
+- Built-in support for popular AI models and platforms
+- Type-safe APIs for AI interactions
+- Utilities for building AI-powered applications
+
+For detailed information and guides, visit the [Vercel AI SDK Documentation](https://sdk.vercel.ai/docs/introduction).
+
 ## Technologies Used
 
 - [Next.js](https://nextjs.org/)
