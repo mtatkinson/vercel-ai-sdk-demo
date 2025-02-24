@@ -1,24 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vercel AI SDK Demo
+
+This is a comprehensive demo application showcasing various capabilities of the Vercel AI SDK. The application is built with Next.js, TailwindCSS, and Shadcn/UI, demonstrating different AI features including text generation, streaming responses, model switching, and more.
+
+## Features
+
+- Text Generation
+- Streaming Responses
+- Model Switching
+- Local Model Integration
+- Structured Outputs
+- Streaming Structured Outputs
+- Classifier
+- Image Analysis
+- Embeddings
+- Tool Calling
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Copy the `.env.example` file to `.env.local` and add your OpenAI API key:
+   ```bash
+   cp .env.example .env.local
+   ```
+4. Add your OpenAI API key to the `.env.local` file:
+   ```
+   OPENAI_API_KEY=your_api_key_here
+   ```
+5. Run the development server:
+   ```bash
+   npm run dev
+   ```
+6. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Project Structure
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `/src/app`: Main application code
+  - `/api`: API routes for AI functionality
+  - `/components`: Reusable UI components
+  - Various feature directories for different AI capabilities
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Technologies Used
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- [Next.js](https://nextjs.org/)
+- [Vercel AI SDK](https://sdk.vercel.ai/docs)
+- [TailwindCSS](https://tailwindcss.com/)
+- [Shadcn/UI](https://ui.shadcn.com/)
+- [OpenAI API](https://openai.com/)
 
 ## Learn More
 

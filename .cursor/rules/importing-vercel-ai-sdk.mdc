@@ -1,0 +1,79 @@
+---
+description: The proper way to import Vercel AI SDK
+globs: 
+---
+## importing-vercel-ai-sdk
+
+When using the Vercel AI SDK in your project, follow these import and usage patterns:
+
+### Imports
+
+#### Core SDK Imports
+```typescript
+// Import core AI SDK functions
+import { generateObject, generateText, streamText } from 'ai'
+```
+
+### Model Settings
+Import global model settings from the lib:
+```typescript
+import { getModel, defaultProvider } from '@/lib/model-settings';
+
+// Using in API routes
+export async function POST(req: Request) {
+  const { model, ...settings } = getModel(defaultProvider);
+  const result = streamText({
+    model,
+    ...settings,
+    messages: [],
+  });
+  return result.toDataStreamResponse();
+}
+```
+
+#### React Hooks (Client Components)
+```typescript
+// Import React hooks for client components
+import { useCompletion, useChat } from 'ai/react'
+```
+
+### Model Usage
+
+#### Basic Model Usage
+```typescript
+const { model, ...settings } = getModel(defaultProvider);
+const result = await generateObject({
+  model,
+  ...settings,
+  messages: [],
+  //... other model settings
+})
+```
+
+#### Structured Output
+When generating structured data, always:
+1. Define a schema (using zod)
+2. Use `generateObject` for non-streaming responses
+3. Include proper error handling
+
+```typescript
+const result = await generateObject({
+  model: openai('gpt-4o-mini'),
+  schema: yourSchema,
+  prompt: prompt,
+  schemaDescription: 'Description of the expected output',
+})
+```
+
+### Required Dependencies
+Make sure these packages are installed:
+```bash
+npm install ai @ai-sdk/openai zod
+```
+
+### Common Gotchas
+- Don't create a new OpenAI client directly; use the `openai()` function from `@ai-sdk/openai`
+- For streaming responses, use the appropriate streaming functions (`streamText`, `streamObject`)
+- When using React hooks, make sure to import from `ai/react` not just `ai`
+
+

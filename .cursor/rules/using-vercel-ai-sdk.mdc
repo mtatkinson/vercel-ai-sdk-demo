@@ -1,0 +1,209 @@
+---
+description: Guidelines for using Vercel AI SDK properly
+globs: 
+---
+# Vercel AI SDK Guidelines 
+
+## Package Dependencies
+Make sure you have the following packages installed:
+```bash
+npm install ai @ai-sdk/openai zod
+```
+
+## Import Rules
+
+### Core AI SDK Functions
+Import core functions from the 'ai' package:
+```typescript
+import { 
+  streamText,      // For streaming text responses with real-time updates
+  generateText,    // For non-streaming text generation
+  tool,           // Helper function for creating tools
+} from 'ai';
+```
+
+### Model Settings
+Import global model settings from the lib:
+```typescript
+import { getModel, defaultProvider } from '@/lib/model-settings';
+
+// Using in API routes
+export async function POST(req: Request) {
+  const { model, ...settings } = getModel(defaultProvider);
+  const result = streamText({
+    model,
+    ...settings,
+    messages: [],
+  });
+  return result.toDataStreamResponse();
+}
+```
+
+### Streaming Response Types
+For handling streaming responses in API routes:
+```typescript
+// Using streamText
+const { model, ...settings } = getModel('openai');
+const result = streamText({
+  model,  // Uses gpt-4o-mini by default
+  ...settings,
+  messages: [],
+});
+return result.toDataStreamResponse(); // Preferred method for streaming
+
+// Using textStream directly
+const { model, ...settings } = getModel('openai');
+const { textStream } = streamText({
+  model,  // Uses gpt-4o-mini by default
+  ...settings,
+  prompt: 'Write something',
+});
+for await (const textPart of textStream) {
+  console.log(textPart);
+}
+```
+
+### React Hooks
+Import React hooks from 'ai/react':
+```typescript
+import {
+  useChat,        // For chat interfaces
+  useCompletion,  // For completion interfaces
+  useAssistant,   // For assistant features
+} from '@ai-sdk/react';
+```
+
+### Model Providers
+Import model providers from their respective packages:
+```typescript
+// OpenAI
+import { openai } from '@ai-sdk/openai';
+
+// Anthropic
+import { anthropic } from '@ai-sdk/anthropic';
+
+// Other providers follow the same pattern
+import { provider } from '@ai-sdk/provider';
+```
+
+## Tool Usage
+
+### Tool Definition
+Tools are actions that an LLM can invoke. Each tool consists of:
+```typescript
+import { z } from 'zod';
+import { tool } from 'ai';
+
+const myTool = tool({
+  description: 'Description of what the tool does', // Optional, helps model understand when to use it
+  parameters: z.object({  // Define parameters using Zod schema
+    param1: z.string().describe('Description of parameter'),
+    param2: z.number().describe('Description of parameter'),
+  }),
+  execute: async ({ param1, param2 }) => {
+    // Async function that performs the tool's action
+    return { result: 'value' };
+  },
+});
+```
+
+### Using Tools in API Routes
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { streamText, tool } from 'ai';
+import { z } from 'zod';
+import { getModel } from '@/lib/model-settings';
+
+export async function POST(req: Request) {
+  const { model, ...settings } = getModel('openai');
+  const result = streamText({
+    model,
+    ...settings,
+    messages: [],
+    tools: {
+      toolName: tool({
+        description: 'Tool description',
+        parameters: z.object({
+          // parameter schema
+        }),
+        execute: async (params) => {
+          // tool implementation
+        },
+      }),
+    },
+    maxSteps: 5, // Enable multi-step tool calls
+  });
+
+  return result.toDataStreamResponse();
+}
+```
+
+### Handling Tool Results in React
+```typescript
+import { useChat } from '@ai-sdk/react';
+
+export function MyComponent() {
+  const { messages } = useChat();
+  
+  return (
+    <div>
+      {messages.map(message => (
+        <div key={message.id}>
+          {message.content}
+          {message.toolInvocations?.map(toolInvocation => {
+            if (toolInvocation.state === 'result') {
+              return (
+                <div key={toolInvocation.toolCallId}>
+                  {/* Render tool result */}
+                </div>
+              );
+            }
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## Common Usage Patterns
+
+### API Routes
+```typescript
+import { streamText } from 'ai';
+import { getModel } from '@/lib/model-settings';
+
+export async function POST(req: Request) {
+  const { model, ...settings } = getModel('openai');
+  const result = streamText({
+    model,
+    ...settings,
+    messages: [], // Your messages here
+  });
+
+  return result.toDataStreamResponse();
+}
+```
+
+### React Components
+```typescript
+import { useCompletion } from '@ai-sdk/react';
+
+export function MyComponent() {
+  const { completion, complete } = useCompletion({
+    api: '/api/generate',
+  });
+}
+```
+
+## Important Notes
+1. Never mix different versions of the SDK packages
+2. Always use named imports (no default imports)
+3. Keep model provider imports separate from core functions
+4. Use the correct import path for React hooks ('@ai-sdk/react')
+5. For streaming responses, always use the toDataStreamResponse() method from streamText
+6. When using tools, always validate parameters with Zod schemas
+7. For complex tool interactions, use maxSteps to enable multi-step tool calls
+8. Tool execute functions should be async and handle errors gracefully
+9. Use global model settings from @/lib/model-settings for consistent configuration
+10. Default to 'gpt-4o-mini' for OpenAI through the global settings 
