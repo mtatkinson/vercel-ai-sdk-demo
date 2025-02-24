@@ -15,106 +15,42 @@ interface ImageAnalysis {
 export function ImageAnalysisDemo() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<ImageAnalysis | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   
   console.log("[Frontend] Component rendered with selectedImage:", !!selectedImage)
   
-  const { messages, isLoading, handleSubmit } = useChat({
-    api: "/api/image-analysis",
-    initialMessages: [],
-    body: {
-      imageUrl: selectedImage,
-    },
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    onResponse: (response) => {
-      console.log("[Frontend] API Response details:", {
-        status: response.status,
-        ok: response.ok,
-        statusText: response.statusText,
-        url: response.url,
-        type: response.type,
-        headers: Object.fromEntries(response.headers.entries()),
-        method: response.type
-      })
-    },
-    onFinish: (message) => {
-      console.log("[Frontend] onFinish called with message:", message)
-      if (!message.content) {
-        console.error("[Frontend] No content in message")
-        return
-      }
-      try {
-        const parsedAnalysis = JSON.parse(message.content)
-        console.log("[Frontend] Successfully parsed analysis:", parsedAnalysis)
-        setAnalysis(parsedAnalysis)
-      } catch (e) {
-        console.error("[Frontend] Failed to parse analysis:", e)
-      }
-    },
-    onError: (error) => {
-      console.error("[Frontend] API Error:", {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
-        cause: error.cause
-      })
-      setAnalysis(null)
-    }
-  })
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
   const analyzeImage = async () => {
-    console.log("[Frontend] analyzeImage called", {
-      hasImage: !!selectedImage,
-      imageLength: selectedImage?.length,
-      isLoading,
-      currentMessages: messages
-    })
-    if (selectedImage) {
-      try {
-        console.log("[Frontend] Preparing to submit analysis request...")
-        
-        console.log("[Frontend] Making direct fetch request to API...")
-        const response = await fetch('/api/image-analysis', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({ imageUrl: selectedImage }),
-        })
-        
-        console.log("[Frontend] Direct API response:", {
-          status: response.status,
-          ok: response.ok,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries())
-        })
-        
-        if (!response.ok) {
-          const errorData = await response.json()
-          console.error("[Frontend] API error response:", errorData)
-          return
-        }
+    if (!selectedImage) return
+    
+    setIsAnalyzing(true)
+    setAnalysis(null)
+    
+    try {
+      console.log("[Frontend] Making API request...")
+      const response = await fetch('/api/image-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageUrl: selectedImage }),
+      })
 
-        const result = await response.json()
-        console.log("[Frontend] API success response:", result)
-
-        // Validate the response structure
-        if (!result.description || !Array.isArray(result.objects) || !Array.isArray(result.dominantColors) || 
-            !result.scene || !Array.isArray(result.tags)) {
-          console.error("[Frontend] Invalid response structure:", result)
-          return
-        }
-
-        setAnalysis(result)
-        console.log("[Frontend] Analysis set successfully:", result)
-      } catch (error) {
-        console.error("[Frontend] Error during API call:", error)
+      if (!response.ok) {
+        throw new Error('Failed to analyze image')
       }
+
+      const result = await response.json()
+      console.log("[Frontend] API response:", result)
+      setAnalysis(result)
+    } catch (error) {
+      console.error("[Frontend] Error analyzing image:", error)
+    } finally {
+      setIsAnalyzing(false)
     }
   }
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -171,6 +107,30 @@ export function ImageAnalysisDemo() {
 
   return (
     <div className="mx-auto w-full max-w-5xl h-full">
+      {isModalOpen && selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] w-full">
+            <img
+              src={selectedImage}
+              alt="Full size"
+              className="w-full h-full object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 bg-black/50 text-white rounded-full p-2 hover:bg-black/70"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border shadow-sm bg-white">
         <div className="p-6">
           <h1 className="text-3xl font-semibold text-gray-900 mb-2">AI Image Analysis</h1>
@@ -209,87 +169,127 @@ export function ImageAnalysisDemo() {
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={analyzeImage}
-                  disabled={!selectedImage || isLoading}
+                  disabled={!selectedImage || isAnalyzing}
                   className="inline-flex items-center rounded-lg bg-purple-500 px-4 py-2 text-sm text-white hover:bg-purple-600 disabled:opacity-50"
                 >
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  {isLoading ? 'Analyzing...' : 'Analyze Image'}
+                  {isAnalyzing ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      Analyze Image
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="relative rounded-lg bg-gray-50 p-4">
-                <img
-                  src={selectedImage}
-                  alt="Uploaded"
-                  className="w-full rounded-lg object-contain"
-                />
-                <button
-                  onClick={() => setSelectedImage(null)}
-                  className="absolute right-2 top-2 rounded-full bg-white/80 p-2 hover:bg-white/90"
-                >
-                  <Upload className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  onClick={analyzeImage}
-                  disabled={isLoading}
-                  className="inline-flex items-center rounded-lg bg-purple-500 px-4 py-2 text-sm text-white hover:bg-purple-600 disabled:opacity-50"
-                >
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  {isLoading ? 'Analyzing...' : 'Analyze Image'}
-                </button>
-              </div>
-
-              {analysis && (
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <h3 className="font-medium mb-2">Objects Detected</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {analysis.objects.map((obj, i) => (
-                        <span key={i} className="px-2 py-1 bg-gray-100 rounded text-sm">
-                          {obj}
-                        </span>
-                      ))}
+              <div className="flex flex-col items-center">
+                <div className="relative w-full max-w-2xl mb-6">
+                  <div 
+                    className="relative rounded-lg bg-gray-50 p-2 cursor-pointer group"
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    <img
+                      src={selectedImage}
+                      alt="Uploaded"
+                      className="w-full rounded-lg object-contain max-h-[300px]"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
+                      <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">Click to enlarge</span>
                     </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-medium mb-2">Dominant Colors</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {analysis.dominantColors.map((color, i) => (
-                        <span key={i} className="px-2 py-1 bg-gray-100 rounded text-sm">
-                          {color}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-medium mb-2">Scene</h3>
-                    <p className="text-gray-700">{analysis.scene}</p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-medium mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {analysis.tags.map((tag, i) => (
-                        <span key={i} className="px-3 py-1 bg-purple-100 rounded-full text-sm">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="col-span-2">
-                    <h3 className="font-medium mb-2">Description</h3>
-                    <p className="text-gray-700">{analysis.description}</p>
                   </div>
                 </div>
-              )}
+
+                <div className="w-full flex justify-center gap-3 mb-8">
+                  <button
+                    onClick={() => {
+                      setSelectedImage(null);
+                      setAnalysis(null);
+                    }}
+                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload New Image
+                  </button>
+                  <button
+                    onClick={analyzeImage}
+                    disabled={isAnalyzing}
+                    className="inline-flex items-center rounded-lg bg-purple-500 px-6 py-2.5 text-sm text-white hover:bg-purple-600 disabled:opacity-50"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        Analyze Image
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {isAnalyzing ? (
+                  <div className="w-full flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-purple-500 border-t-transparent"></div>
+                      <p className="mt-4 text-sm font-medium text-gray-900">Analyzing your image...</p>
+                      <p className="mt-2 text-sm text-gray-500">This may take a few seconds</p>
+                    </div>
+                  </div>
+                ) : analysis ? (
+                  <div className="w-full grid grid-cols-2 gap-8">
+                    <div>
+                      <h3 className="font-medium mb-2">Objects Detected</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {analysis.objects.map((obj, i) => (
+                          <span key={i} className="px-2 py-1 bg-gray-100 rounded text-sm">
+                            {obj}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-medium mb-2">Dominant Colors</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {analysis.dominantColors.map((color, i) => (
+                          <span key={i} className="px-2 py-1 bg-gray-100 rounded text-sm">
+                            {color}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-medium mb-2">Scene</h3>
+                      <p className="text-gray-700">{analysis.scene}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-medium mb-2">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {analysis.tags.map((tag, i) => (
+                          <span key={i} className="px-3 py-1 bg-purple-100 rounded-full text-sm">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="col-span-2">
+                      <h3 className="font-medium mb-2">Description</h3>
+                      <p className="text-gray-700">{analysis.description}</p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
         </div>
