@@ -18,8 +18,6 @@ export function ImageAnalysisDemo() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   
-  console.log("[Frontend] Component rendered with selectedImage:", !!selectedImage)
-  
   const analyzeImage = async () => {
     if (!selectedImage) return
     
@@ -27,7 +25,6 @@ export function ImageAnalysisDemo() {
     setAnalysis(null)
     
     try {
-      console.log("[Frontend] Making API request...")
       const response = await fetch('/api/image-analysis', {
         method: 'POST',
         headers: {
@@ -41,10 +38,9 @@ export function ImageAnalysisDemo() {
       }
 
       const result = await response.json()
-      console.log("[Frontend] API response:", result)
       setAnalysis(result)
     } catch (error) {
-      console.error("[Frontend] Error analyzing image:", error)
+      console.error("Error analyzing image:", error)
     } finally {
       setIsAnalyzing(false)
     }
@@ -54,11 +50,9 @@ export function ImageAnalysisDemo() {
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    console.log("File selected:", file?.name)
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
-        console.log("File read complete, setting selected image")
         setSelectedImage(reader.result as string)
       }
       reader.readAsDataURL(file)
